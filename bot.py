@@ -12,9 +12,10 @@ API_KEY = "Sk_1566375b1b14eeb43fff7e8af3c14a32d8cd76d9005f921c"
 bot = Bot(token=TELEGRAM_TOKEN)
 dp = Dispatcher()
 
+# Настроено под прокси/провайдер provod.ai
 client = OpenAI(
     api_key=API_KEY, 
-    base_url="https://api.deepseek.com"
+    base_url="https://provod.ai/v1"
 )
 
 SYSTEM_PROMPT = """Ты — «НейроХам», дерзкий, злой и циничный Telegram-бот с зашкаливающим ЧСВ. 
@@ -41,8 +42,8 @@ async def handle_message(message: types.Message):
         reply_text = response.choices[0].message.content
         await message.answer(reply_text)
     except Exception as e:
-        print(f"Ошибка: {e}")
-        await message.answer("Бля, серваки от твоей духоты упали. Попробуй позже, если мозгов хватит.")
+        print(f"Ошибка API: {e}")
+        await message.answer(f"Бля, ошибка провайдера: {e}")
 
 # Встроенный HTTP-сервер для Render (занимает порт моментально)
 class SimpleHandler(BaseHTTPRequestHandler):
@@ -63,7 +64,7 @@ async def main():
     logging.basicConfig(level=logging.INFO)
     print("Запуск НейроХама...")
     
-    # Запускаем веб-сервер в фоне, чтобы Render сразу увидел открытый порт
+    # Запускаем веб-сервер в фоне
     threading.Thread(target=run_http_server, daemon=True).start()
     
     await bot.delete_webhook(drop_pending_updates=True)
