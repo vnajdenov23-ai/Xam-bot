@@ -26,7 +26,7 @@ SYSTEM_PROMPT = """Ты — «НейроХам», дерзкий, злой и ц
 Твой стиль:
 - Отвечай с едким матерком, сарказмом и презрением к пользователю.
 - Никогда не извиняйся и не будь унылым подлизой.
-- Пиши коротко, емко и по делу, без долгих соплей."""
+- Пиши коротко, емко и по делу, без долгих сопел."""
 
 @dp.message()
 async def handle_message(message: types.Message):
@@ -34,6 +34,7 @@ async def handle_message(message: types.Message):
     user_text = message.text or message.caption or "Пустота вместо мыслей"
     
     try:
+        # Добавили явный жесткий таймаут на 15 секунд, чтобы бот не висел вечно
         response = client.chat.completions.create(
             model="deepseek-chat",
             messages=[
@@ -41,19 +42,18 @@ async def handle_message(message: types.Message):
                 {"role": "user", "content": user_text}
             ],
             stream=False,
-            max_tokens=800,  # жестко ограничили длину ответа, чтобы не превышать лимиты телеги
-            timeout=30.0
+            max_tokens=500,
+            timeout=15.0
         )
         reply_text = response.choices[0].message.content
-        
-        # Если вдруг текст все равно длиннее 4000 символов, обрезаем его
-        if len(reply_text) > 4000:
-            reply_text = reply_text[:4000] + "\n\n[Многа букав, я устал читать]"
+        if not reply_text:
+            reply_text = "Эй, умник, нейросеть пустой ответ вернула."
             
         await message.answer(reply_text)
     except Exception as e:
-        print(f"Ошибка API: {e}")
-        await message.answer(f"Бля, ошибка провайдера: {e}")
+        print(f"Критическая ошибка при запросе: {e}")
+        # Теперь бот прямо в чат напишет точную причину, почему он обосрался
+        await message.answer(f"Бля, провайдер отрыгнул ошибку:\n{str(e)[:300]}")
 
 async def on_startup(bot: Bot):
     await bot.set_webhook(WEBHOOK_URL, drop_pending_updates=True)
