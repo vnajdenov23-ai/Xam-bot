@@ -1,12 +1,12 @@
 import os
 import logging
+import aiohttp
 from aiohttp import web
 from aiogram import Bot, Dispatcher, types
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
-from openai import OpenAI
 
 TELEGRAM_TOKEN = "8414348238:AAG6aV5_YYAn3pxmt-bwrcbjiEWqiTc5Sns"
-API_KEY = "sk_1566375b1b14eeb43fff7e8af3c14a32d8cd76d9005f921c" # Твой ключ от provod.ai
+API_KEY = "Sk_1566375b1b14eeb43fff7e8af3c14a32d8cd76d9005f921c"
 
 WEBHOOK_HOST = os.environ.get("RENDER_EXTERNAL_URL", "https://tvoiservice.onrender.com")
 WEBHOOK_PATH = f"/webhook/{TELEGRAM_TOKEN}"
@@ -16,12 +16,6 @@ PORT = int(os.environ.get("PORT", 10000))
 
 bot = Bot(token=TELEGRAM_TOKEN)
 dp = Dispatcher()
-
-# Настраиваем клиент на шлюз provod.ai
-client = OpenAI(
-    api_key=API_KEY, 
-    base_url="https://api.provod.ai/v1"
-)
 
 SYSTEM_PROMPT = """Ты — «НейроХам», дерзкий, злой и циничный Telegram-бот с зашкаливающим ЧСВ. 
 Твой стиль:
@@ -34,25 +28,38 @@ async def handle_message(message: types.Message):
     await bot.send_chat_action(message.chat.id, "typing")
     user_text = message.text or message.caption or "Пустота вместо мыслей"
     
+    url = "https://api.provod.ai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "deepseek-chat", # Проверь точное имя модели в доках provod.ai, если опять будет 404
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_text}
+        ],
+        "max_tokens": 500
+    }
+    
     try:
-        response = client.chat.completions.create(
-            model="deepseek/deepseek-chat", # Проверь точное название модели в своем личном кабинете provod.ai
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_text}
-            ],
-            stream=False,
-            max_tokens=500,
-            timeout=15.0
-        )
-        reply_text = response.choices[0].message.content
-        if not reply_text:
-            reply_text = "Эй, умник, нейросеть пустой ответ вернула."
-            
-        await message.answer(reply_text)
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload, headers=headers, timeout=15) as resp:
+                if resp.status != 200:
+                    text_err = await resp.text()
+                    await message.answer(f"Бля, провайдер вернул код {resp.status}:\n{text_err[:300]}")
+                    return
+                
+                data = await resp.json()
+                reply_text = data["choices"][0]["message"]["content"]
+                if not reply_text:
+                    reply_text = "Эй, умник, нейросеть пустой ответ вернула."
+                
+                await message.answer(reply_text)
+                
     except Exception as e:
         print(f"Критическая ошибка при запросе: {e}")
-        await message.answer(f"Бля, ошибка провайдера:\n{str(e)[:300]}")
+        await message.answer(f"Бля, ошибка запроса:\n{str(e)[:300]}")
 
 async def on_startup(bot: Bot):
     await bot.set_webhook(WEBHOOK_URL, drop_pending_updates=True)
