@@ -6,7 +6,7 @@ from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_applicati
 from openai import OpenAI
 
 TELEGRAM_TOKEN = "8414348238:AAG6aV5_YYAn3pxmt-bwrcbjiEWqiTc5Sns"
-API_KEY = "Sk_1566375b1b14eeb43fff7e8af3c14a32d8cd76d9005f921c"
+API_KEY = "sk_1566375b1b14eeb43fff7e8af3c14a32d8cd76d9005f921c" # Твой ключ от provod.ai
 
 WEBHOOK_HOST = os.environ.get("RENDER_EXTERNAL_URL", "https://tvoiservice.onrender.com")
 WEBHOOK_PATH = f"/webhook/{TELEGRAM_TOKEN}"
@@ -17,10 +17,10 @@ PORT = int(os.environ.get("PORT", 10000))
 bot = Bot(token=TELEGRAM_TOKEN)
 dp = Dispatcher()
 
-# Официальный базовый URL для DeepSeek API
+# Настраиваем клиент на шлюз provod.ai
 client = OpenAI(
     api_key=API_KEY, 
-    base_url="https://api.deepseek.com"
+    base_url="https://api.provod.ai/v1"
 )
 
 SYSTEM_PROMPT = """Ты — «НейроХам», дерзкий, злой и циничный Telegram-бот с зашкаливающим ЧСВ. 
@@ -36,7 +36,7 @@ async def handle_message(message: types.Message):
     
     try:
         response = client.chat.completions.create(
-            model="deepseek-chat",
+            model="deepseek/deepseek-chat", # Проверь точное название модели в своем личном кабинете provod.ai
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_text}
