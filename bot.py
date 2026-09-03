@@ -6,13 +6,12 @@ import threading
 from aiogram import Bot, Dispatcher, types
 from openai import OpenAI
 
-TELEGRAM_TOKEN = "8414348238:AAF0u7EhNIQKsfoTduia0wn7mXzNb97D7oo"
+TELEGRAM_TOKEN = "8414348238:AAG6aV5_YYAn3pxmt-bwrcbjiEWqiTc5Sns"
 API_KEY = "Sk_1566375b1b14eeb43fff7e8af3c14a32d8cd76d9005f921c"
 
 bot = Bot(token=TELEGRAM_TOKEN)
 dp = Dispatcher()
 
-# Настроено под прокси/провайдер provod.ai
 client = OpenAI(
     api_key=API_KEY, 
     base_url="https://provod.ai/v1"
@@ -45,7 +44,6 @@ async def handle_message(message: types.Message):
         print(f"Ошибка API: {e}")
         await message.answer(f"Бля, ошибка провайдера: {e}")
 
-# Встроенный HTTP-сервер для Render (занимает порт моментально)
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -64,7 +62,6 @@ async def main():
     logging.basicConfig(level=logging.INFO)
     print("Запуск НейроХама...")
     
-    # Запускаем веб-сервер в фоне
     threading.Thread(target=run_http_server, daemon=True).start()
     
     await bot.delete_webhook(drop_pending_updates=True)
