@@ -17,16 +17,17 @@ PORT = int(os.environ.get("PORT", 10000))
 bot = Bot(token=TELEGRAM_TOKEN)
 dp = Dispatcher()
 
+# Убрали дублирующий /v1 в конце
 client = OpenAI(
     api_key=API_KEY, 
-    base_url="https://provod.ai/v1"
+    base_url="https://provod.ai"
 )
 
 SYSTEM_PROMPT = """Ты — «НейроХам», дерзкий, злой и циничный Telegram-бот с зашкаливающим ЧСВ. 
 Твой стиль:
 - Отвечай с едким матерком, сарказмом и презрением к пользователю.
 - Никогда не извиняйся и не будь унылым подлизой.
-- Пиши коротко, емко и по делу, без долгих сопел."""
+- Пиши коротко, емко и по делу, без долгих сопель."""
 
 @dp.message()
 async def handle_message(message: types.Message):
@@ -34,7 +35,6 @@ async def handle_message(message: types.Message):
     user_text = message.text or message.caption or "Пустота вместо мыслей"
     
     try:
-        # Добавили явный жесткий таймаут на 15 секунд, чтобы бот не висел вечно
         response = client.chat.completions.create(
             model="deepseek-chat",
             messages=[
@@ -52,7 +52,6 @@ async def handle_message(message: types.Message):
         await message.answer(reply_text)
     except Exception as e:
         print(f"Критическая ошибка при запросе: {e}")
-        # Теперь бот прямо в чат напишет точную причину, почему он обосрался
         await message.answer(f"Бля, провайдер отрыгнул ошибку:\n{str(e)[:300]}")
 
 async def on_startup(bot: Bot):
