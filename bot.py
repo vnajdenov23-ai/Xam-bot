@@ -6,7 +6,8 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 
 TELEGRAM_TOKEN = "8414348238:AAG6aV5_YYAn3pxmt-bwrcbjiEWqiTc5Sns"
-API_KEY = "Sk_1566375b1b14eeb43fff7e8af3c14a32d8cd76d9005f921c"
+# Исправили заглавную 'S' на строчную 's', как на скриншоте из личного кабинета
+API_KEY = "sk_1566375b1b14eeb43fff7e8af3c14a32d8cd76d9005f921c"
 
 WEBHOOK_HOST = os.environ.get("RENDER_EXTERNAL_URL", "https://tvoiservice.onrender.com")
 WEBHOOK_PATH = f"/webhook/{TELEGRAM_TOKEN}"
@@ -34,7 +35,7 @@ async def handle_message(message: types.Message):
         "Content-Type": "application/json"
     }
     payload = {
-        "model": "deepseek-chat", # Проверь точное имя модели в доках provod.ai, если опять будет 404
+        "model": "deepseek-chat",
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_text}
