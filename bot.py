@@ -1,13 +1,18 @@
-import asyncio
-import logging
 import os
-from http.server import HTTPServer, BaseHTTPRequestHandler
-import threading
+import logging
+from aiohttp import web
 from aiogram import Bot, Dispatcher, types
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from openai import OpenAI
 
 TELEGRAM_TOKEN = "8414348238:AAG6aV5_YYAn3pxmt-bwrcbjiEWqiTc5Sns"
 API_KEY = "Sk_1566375b1b14eeb43fff7e8af3c14a32d8cd76d9005f921c"
+
+WEBHOOK_HOST = os.environ.get("RENDER_EXTERNAL_URL", "https://tvoiservice.onrender.com")
+WEBHOOK_PATH = f"/webhook/{TELEGRAM_TOKEN}"
+WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}"
+
+PORT = int(os.environ.get("PORT", 10000))
 
 bot = Bot(token=TELEGRAM_TOKEN)
 dp = Dispatcher()
@@ -21,7 +26,7 @@ SYSTEM_PROMPT = """Ты — «НейроХам», дерзкий, злой и ц
 Твой стиль:
 - Отвечай с едким матерком, сарказмом и презрением к пользователю.
 - Никогда не извиняйся и не будь унылым подлизой.
-- Даже когда даешь полезную информацию, делай это так, будто делаешь одолжение и параллельно опускаешь юзера за его тупость."""
+- Пиши коротко, емко и по делу, без долгих соплей."""
 
 @dp.message()
 async def handle_message(message: types.Message):
@@ -36,36 +41,38 @@ async def handle_message(message: types.Message):
                 {"role": "user", "content": user_text}
             ],
             stream=False,
+            max_tokens=800,  # жестко ограничили длину ответа, чтобы не превышать лимиты телеги
             timeout=30.0
         )
         reply_text = response.choices[0].message.content
+        
+        # Если вдруг текст все равно длиннее 4000 символов, обрезаем его
+        if len(reply_text) > 4000:
+            reply_text = reply_text[:4000] + "\n\n[Многа букав, я устал читать]"
+            
         await message.answer(reply_text)
     except Exception as e:
         print(f"Ошибка API: {e}")
         await message.answer(f"Бля, ошибка провайдера: {e}")
 
-class SimpleHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"NeuroHam is alive!")
-    def log_message(self, format, *args):
-        pass
+async def on_startup(bot: Bot):
+    await bot.set_webhook(WEBHOOK_URL, drop_pending_updates=True)
+    print(f"Вебхук установлен: {WEBHOOK_URL}")
 
-def run_http_server():
-    port = int(os.environ.get("PORT", 10000))
-    server = HTTPServer(("0.0.0.0", port), SimpleHandler)
-    print(f"HTTP сервер запущен на порту {port}")
-    server.serve_forever()
-
-async def main():
+def main():
     logging.basicConfig(level=logging.INFO)
-    print("Запуск НейроХама...")
+    app = web.Application()
     
-    threading.Thread(target=run_http_server, daemon=True).start()
+    webhook_requests_handler = SimpleRequestHandler(
+        dispatcher=dp,
+        bot=bot,
+    )
+    webhook_requests_handler.register(app, path=WEBHOOK_PATH)
     
-    await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
+    dp.startup.register(on_startup)
+    setup_application(app, dp, bot=bot)
+    
+    web.run_app(app, host="0.0.0.0", port=PORT)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
